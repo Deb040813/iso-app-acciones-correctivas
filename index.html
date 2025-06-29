@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Acciones Correctivas - ISO 9001</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body { padding: 20px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Contenido generado automáticamente con panel de administrador, usuarios, evidencias, dashboard personal y dashboard global -->
+  <!-- Este archivo ya está listo para usarse en Visual Studio Code como una app completa -->
+  <!-- Revisa el contenido en el archivo que te acabo de preparar -->
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Acciones Correctivas - ISO 9001</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body { padding: 20px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1 class="mb-4">Gestión de Acciones Correctivas</h1>
+
+  <!-- LOGIN -->
+  <div id="loginSection">
+    <h4>Iniciar sesión</h4>
+    <input id="userInput" class="form-control mb-2" placeholder="Tu nombre o usuario" />
+    <button class="btn btn-primary" onclick="login()">Entrar</button>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminSection" class="hidden mb-4">
+    <h4>Agregar acción correctiva</h4>
+    <input id="nuevaAccionId" class="form-control mb-1" placeholder="ID (ej. AC05)" />
+    <input id="nuevaAccionNombre" class="form-control mb-1" placeholder="Nombre de la acción" />
+    <input id="nuevaAccionTotal" type="number" class="form-control mb-1" placeholder="Evidencias requeridas" />
+    <input id="nuevaAccionResponsable" class="form-control mb-1" placeholder="Usuario responsable" />
+    <button class="btn btn-success" onclick="agregarAccionCorrectiva()">Agregar</button>
+  </div>
+
+  <!-- ACCIONES -->
+  <div id="mainSection" class="hidden">
+    <div class="mb-3">
+      <label for="accionSelect" class="form-label">Selecciona tu acción correctiva:</label>
+      <select id="accionSelect" class="form-select"></select>
+    </div>
+
+    <div id="evidenciaForm" class="hidden mb-3">
+      <label for="evidenciaInput" class="form-label">Sube tu evidencia:</label>
+      <input type="file" id="evidenciaInput" class="form-control" />
+      <button class="btn btn-success mt-2" onclick="guardarEvidencia()">Guardar evidencia</button>
+    </div>
+
+    <div id="avanceSection" class="hidden mt-4">
+      <h5>Avance de cumplimiento:</h5>
+      <div class="progress">
+        <div id="barraAvance" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+      </div>
+    </div>
+
+    <div class="mt-5">
+      <h4>Mi Panel de Avance</h4>
+      <canvas id="avanceChart" height="100"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  let usuario = "";
+  let accionActual = "";
+  const acciones = {}; // ejemplo: {AC01: {nombre: ..., total: ..., responsable: ...}}
+  const usuarioData = {}; // ejemplo: {usuario1: {AC01: 1, AC03: 2}}
+
+  function login() {
+    usuario = document.getElementById("userInput").value.trim();
+    if (!usuario) return;
+
+    document.getElementById("loginSection").classList.add("hidden");
+
+    if (usuario.toLowerCase() === "sistema.calidad") {
+      document.getElementById("adminSection").classList.remove("hidden");
+    }
+
+    document.getElementById("mainSection").classList.remove("hidden");
+    renderAccionesDisponibles();
+    renderDashboard();
+  }
+
+  function agregarAccionCorrectiva() {
+    const id = document.getElementById("nuevaAccionId").value.trim();
+    const nombre = document.getElementById("nuevaAccionNombre").value.trim();
+    const total = parseInt(document.getElementById("nuevaAccionTotal").value.trim());
+    const responsable = document.getElementById("nuevaAccionResponsable").value.trim();
+
+    if (id && nombre && total && responsable) {
+      acciones[id] = { nombre, total, responsable };
+      if (!usuarioData[responsable]) usuarioData[responsable] = {};
+      usuarioData[responsable][id] = 0;
+      alert("✅ Acción agregada correctamente");
+      renderAccionesDisponibles();
+    }
+  }
+
+  function renderAccionesDisponibles() {
+    const select = document.getElementById("accionSelect");
+    select.innerHTML = '<option value="">-- Selecciona --</option>';
+
+    for (const id in acciones) {
+      if (acciones[id].responsable === usuario) {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = `${id} - ${acciones[id].nombre}`;
+        select.appendChild(option);
+      }
+    }
+  }
+
+  document.getElementById('accionSelect').addEventListener('change', function () {
+    accionActual = this.value;
+    if (accionActual) {
+      document.getElementById('evidenciaForm').classList.remove('hidden');
+      actualizarAvance();
+      renderDashboard();
+    } else {
+      document.getElementById('evidenciaForm').classList.add('hidden');
+      document.getElementById('avanceSection').classList.add('hidden');
+    }
+  });
+
+  function guardarEvidencia() {
+    if (!accionActual) return;
+    if (!usuarioData[usuario][accionActual]) usuarioData[usuario][accionActual] = 0;
+    const max = acciones[accionActual].total;
+    if (usuarioData[usuario][accionActual] < max) {
+      usuarioData[usuario][accionActual]++;
+      actualizarAvance();
+      renderDashboard();
+      alert('✅ Evidencia registrada para ' + accionActual);
+    } else {
+      alert('🎉 Ya completaste todas las evidencias de esta acción.');
+    }
+  }
+
+  function actualizarAvance() {
+    const completadas = usuarioData[usuario][accionActual] || 0;
+    const total = acciones[accionActual].total;
+    const porcentaje = Math.round((completadas / total) * 100);
+    const barra = document.getElementById('barraAvance');
+    barra.style.width = porcentaje + '%';
+    barra.textContent = porcentaje + '%';
+    document.getElementById('avanceSection').classList.remove('hidden');
+  }
+
+  function renderDashboard() {
+    const labels = [];
+    const completadas = [];
+    const totales = [];
+
+    for (const key in acciones) {
+      if (acciones[key].responsable === usuario) {
+        labels.push(`${key}`);
+        completadas.push(usuarioData[usuario]?.[key] || 0);
+        totales.push(acciones[key].total);
+      }
+    }
+
+    const ctx = document.getElementById('avanceChart').getContext('2d');
+    if (window.avanceChart && typeof window.avanceChart.destroy === 'function') {
+      window.avanceChart.destroy();
+    }
+    window.avanceChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Completadas',
+            data: completadas,
+            backgroundColor: 'rgba(40, 167, 69, 0.6)'
+          },
+          {
+            label: 'Total requeridas',
+            data: totales,
+            backgroundColor: 'rgba(220, 53, 69, 0.6)'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>
+<!-- Panel de avance global para sistema.calidad -->
+<div id="dashboardGlobal" class="hidden mt-5">
+  <h3>Avance Global de Todos los Usuarios</h3>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Usuario</th>
+        <th>Acción</th>
+        <th>Completadas</th>
+        <th>Totales</th>
+        <th>% Avance</th>
+      </tr>
+    </thead>
+    <tbody id="tablaGlobal"></tbody>
+  </table>
+</div>
+
+<script>
+  function renderDashboardGlobal() {
+    const tabla = document.getElementById("tablaGlobal");
+    tabla.innerHTML = "";
+
+    for (const user in usuarioData) {
+      for (const accion in usuarioData[user]) {
+        const total = acciones[accion]?.total || 0;
+        const completadas = usuarioData[user][accion];
+        const porcentaje = total > 0 ? Math.round((completadas / total) * 100) : 0;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${user}</td>
+          <td>${accion}</td>
+          <td>${completadas}</td>
+          <td>${total}</td>
+          <td>${porcentaje}%</td>
+        `;
+        tabla.appendChild(row);
+      }
+    }
+  }
+
+  function login() {
+    usuario = document.getElementById("userInput").value.trim();
+    if (!usuario) return;
+
+    document.getElementById("loginSection").classList.add("hidden");
+
+    if (usuario.toLowerCase() === "sistema.calidad") {
+      document.getElementById("adminSection").classList.remove("hidden");
+      document.getElementById("dashboardGlobal").classList.remove("hidden");
+      renderDashboardGlobal();
+    }
+
+    document.getElementById("mainSection").classList.remove("hidden");
+    renderAccionesDisponibles();
+    renderDashboard();
+  }
+</script>
